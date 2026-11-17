@@ -83,9 +83,13 @@ pwd-vault/
 │   └── routers/
 │       ├── auth.py        # /auth/login, /auth/logout, /auth/saya
 │       └── entri.py       # CRUD entri, reveal password, password acak
+├── scripts/
+│   └── buat_env.py        # skrip CLI membuat .env (izin 600, tidak menimpa)
 ├── data/
-│   └── vault.db       # SQLite, tidak di-commit
+│   └── vault.db           # SQLite, tidak di-commit
 └── tests/
+    ├── test_health.py
+    └── test_config_db.py
 ```
 
 ## Skema database
@@ -111,7 +115,7 @@ pwd-vault/
 # 4. PLAN (urutan kerja)
 
 - [x] Tahap 1: folder proyek, venv, `requirements.txt`, `.gitignore`, `git init`, `main.py` minimal dengan `/health`, satu test
-- [ ] Tahap 2: `config.py` (baca `.env`), `database.py` dan pembuatan tabel
+- [x] Tahap 2: `config.py` (baca `.env`), `database.py` dan pembuatan tabel
 - [ ] Tahap 3: `security.py` (hash scrypt dan enkripsi Fernet), beserta test
 - [ ] Tahap 4: `buat_pengguna.py`, login, logout, sesi, batas percobaan login, beserta test
 - [ ] Tahap 5: endpoint tambah, lihat daftar, lihat satu entri, beserta test (termasuk test bahwa isi database terenkripsi)
@@ -124,10 +128,10 @@ pwd-vault/
 
 # 5. STATUS (kondisi sekarang)
 
-- **Tahap aktif:** 2
-- **Terakhir selesai:** Tahap 1 (kerangka proyek dan `/health`)
+- **Tahap aktif:** 3
+- **Terakhir selesai:** Tahap 2 (`config.py`, `database.py`, pembuatan tabel)
 - **Masalah terbuka:** belum ada
-- **Yang ingin dikerjakan sekarang:** Tahap 2, `config.py` (baca `.env`), `database.py` dan pembuatan tabel
+- **Yang ingin dikerjakan sekarang:** Tahap 3, `security.py` (hash scrypt dan enkripsi Fernet), beserta test
 
 ---
 
