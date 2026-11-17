@@ -28,6 +28,18 @@ def test_config_parser_keeps_equals_in_value(tmp_path):
     assert s.session_secret == "def=456="
 
 
+def test_config_does_not_modify_os_environ(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "FERNET_KEY=password-palsu-key\nSESSION_SECRET=password-palsu-secret\n"
+    )
+
+    before = dict(os.environ)
+    s = Settings(env_path=str(env_file))
+    assert s.fernet_key == "password-palsu-key"
+    assert dict(os.environ) == before
+
+
 def test_config_raises_if_fernet_key_empty(tmp_path, monkeypatch):
     monkeypatch.delenv("FERNET_KEY", raising=False)
     monkeypatch.delenv("SESSION_SECRET", raising=False)

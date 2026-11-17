@@ -5,9 +5,7 @@ from pathlib import Path
 class Settings:
     """Konfigurasi aplikasi yang dibaca dari file .env.
 
-    Parser sengaja dibuat manual (tanpa library tambahan). Nilai dipisah
-    memakai split("=", 1) supaya nilai yang mengandung tanda "=" (misalnya
-    padding base64 pada kunci Fernet) tetap utuh.
+    Membaca .env ke dictionary lokal tanpa memodifikasi os.environ.
     """
 
     def __init__(self, env_path: str = None):
@@ -15,6 +13,7 @@ class Settings:
             env_path = Path(__file__).resolve().parent.parent / ".env"
         self.fernet_key: str = ""
         self.session_secret: str = ""
+        self._env_vars = {}
         self._load_env(env_path)
         self._validate()
 
@@ -34,10 +33,10 @@ class Settings:
                 if "=" not in line:
                     continue
                 key, val = line.split("=", 1)
-                os.environ[key.strip()] = val.strip().strip("\"'")
+                self._env_vars[key.strip()] = val.strip().strip("\"'")
 
-        self.fernet_key = os.environ.get("FERNET_KEY", "")
-        self.session_secret = os.environ.get("SESSION_SECRET", "")
+        self.fernet_key = self._env_vars.get("FERNET_KEY", "")
+        self.session_secret = self._env_vars.get("SESSION_SECRET", "")
 
     def _validate(self):
         if not self.fernet_key:
