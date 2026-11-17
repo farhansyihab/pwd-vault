@@ -7,6 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.config import Settings, get_settings
 from app.database import init_db
 from app.routers import auth as auth_router
+from app.routers import entri as entri_router
 
 SESSION_MAX_AGE = 3600  # 1 jam (detik); sesi berakhir otomatis setelah itu
 
@@ -38,6 +39,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     )
 
     app.include_router(auth_router.router)
+    app.include_router(entri_router.router)
 
     @app.get("/health")
     def health():

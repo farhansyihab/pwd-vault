@@ -91,7 +91,8 @@ pwd-vault/
     ├── test_health.py
     ├── test_config_db.py
     ├── test_security.py
-    └── test_auth.py
+    ├── test_auth.py
+    └── test_entri.py
 ```
 
 ## Skema database
@@ -121,7 +122,7 @@ pwd-vault/
 - [x] Tahap 2: `config.py` (baca `.env`), `database.py` dan pembuatan tabel
 - [x] Tahap 3: `security.py` (hash scrypt dan enkripsi Fernet), beserta test
 - [x] Tahap 4: `buat_pengguna.py`, login, logout, sesi, batas percobaan login, beserta test
-- [ ] Tahap 5: endpoint tambah, lihat daftar, lihat satu entri, beserta test (termasuk test bahwa isi database terenkripsi)
+- [x] Tahap 5: endpoint tambah, lihat daftar, lihat satu entri, beserta test (termasuk test bahwa isi database terenkripsi)
 - [ ] Tahap 6: endpoint ubah dan hapus, beserta test
 - [ ] Tahap 7: endpoint lihat password asli dan pencarian
 - [ ] Tahap 8: pembuat password acak
@@ -131,10 +132,10 @@ pwd-vault/
 
 # 5. STATUS (kondisi sekarang)
 
-- **Tahap aktif:** 5
-- **Terakhir selesai:** Tahap 4 (`buat_pengguna.py`, login, logout, sesi, batas percobaan login, beserta test)
+- **Tahap aktif:** 6
+- **Terakhir selesai:** Tahap 5 (endpoint tambah, lihat daftar, lihat satu entri, beserta test termasuk enkripsi database)
 - **Masalah terbuka:** belum ada
-- **Yang ingin dikerjakan sekarang:** Tahap 5, endpoint tambah, lihat daftar, lihat satu entri, beserta test (termasuk test bahwa isi database terenkripsi)
+- **Yang ingin dikerjakan sekarang:** Tahap 6, endpoint ubah dan hapus, beserta test
 
 ---
 
