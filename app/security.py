@@ -36,7 +36,7 @@ def hash_password(password: str, n: int = 2**17, r: int = 8, p: int = 1) -> str:
             dklen=32,
             maxmem=2**28,
         )
-    except Exception as e:
+    except ValueError as e:
         raise ValueError(f"Gagal melakukan hashing password: {e}")
 
     hash_hex = hash_bytes.hex()
@@ -53,7 +53,7 @@ def verify_password(password: str, stored_hash: str) -> bool:
     if not stored_hash or not isinstance(stored_hash, str):
         return False
     if not isinstance(password, str):
-        password = str(password)
+        return False
 
     parts = stored_hash.split("$")
     if len(parts) != 6 or parts[0] != "scrypt":
@@ -93,7 +93,7 @@ def verify_password(password: str, stored_hash: str) -> bool:
             dklen=32,
             maxmem=2**28,
         )
-    except Exception:
+    except ValueError:
         return False
 
     return hmac.compare_digest(computed_hash_bytes, expected_hash_bytes)
@@ -108,7 +108,7 @@ def encrypt_entry_password(plaintext: str, key: str = None) -> str:
         key = get_settings().fernet_key
 
     if not isinstance(plaintext, str):
-        plaintext = str(plaintext)
+        raise TypeError("Plaintext harus berupa string.")
 
     try:
         key_bytes = key.encode("utf-8") if isinstance(key, str) else key

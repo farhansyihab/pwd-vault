@@ -115,3 +115,27 @@ def test_wrong_ciphertext_type_not_masked_as_decryption_error():
 
     with pytest.raises(TypeError):
         decrypt_entry_password(12345, key=key)
+
+
+def test_verify_password_non_string_password_returns_false():
+    valid_hash = hash_password("password-palsu-123", n=16384, r=8, p=1)
+
+    assert verify_password(None, valid_hash) is False
+    assert verify_password(12345, valid_hash) is False
+    assert verify_password(b"password-palsu-123", valid_hash) is False
+
+
+def test_encrypt_entry_password_non_string_plaintext_raises_type_error():
+    key = Fernet.generate_key().decode()
+
+    with pytest.raises(TypeError):
+        encrypt_entry_password(None, key=key)
+
+    with pytest.raises(TypeError):
+        encrypt_entry_password(12345, key=key)
+
+
+def test_hash_password_invalid_scrypt_param_raises_value_error():
+    # n bukan pangkat 2 -> hashlib.scrypt melempar ValueError
+    with pytest.raises(ValueError):
+        hash_password("password-palsu-123", n=3, r=8, p=1)
