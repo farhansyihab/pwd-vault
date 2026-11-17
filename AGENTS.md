@@ -109,6 +109,7 @@ pwd-vault/
 - 2026-11-17: Password akun login di-hash dengan `hashlib.scrypt`, tanpa library tambahan
 - 2026-11-17: Antarmuka cukup `/docs` bawaan FastAPI, tanpa HTML
 - 2026-11-17: Port 8001 dipakai supaya tidak bentrok dengan layanan lain di port 8000
+- 2026-11-17: Parameter scrypt dipilih `n=2**17`, `r=8`, `p=1`, `dklen=32`, `maxmem=2**28` setelah pengukuran ~0,65 detik di laptop pengguna. `maxmem` hanya batas atas memori, bukan perlindungan DoS. `verify_password` menolak hash di luar batas `n` pangkat 2 antara 2**14–2**20 dan `r`, `p` 1–32 sebelum menjalankan scrypt
 
 ---
 
@@ -116,7 +117,7 @@ pwd-vault/
 
 - [x] Tahap 1: folder proyek, venv, `requirements.txt`, `.gitignore`, `git init`, `main.py` minimal dengan `/health`, satu test
 - [x] Tahap 2: `config.py` (baca `.env`), `database.py` dan pembuatan tabel
-- [ ] Tahap 3: `security.py` (hash scrypt dan enkripsi Fernet), beserta test
+- [x] Tahap 3: `security.py` (hash scrypt dan enkripsi Fernet), beserta test
 - [ ] Tahap 4: `buat_pengguna.py`, login, logout, sesi, batas percobaan login, beserta test
 - [ ] Tahap 5: endpoint tambah, lihat daftar, lihat satu entri, beserta test (termasuk test bahwa isi database terenkripsi)
 - [ ] Tahap 6: endpoint ubah dan hapus, beserta test
@@ -128,10 +129,10 @@ pwd-vault/
 
 # 5. STATUS (kondisi sekarang)
 
-- **Tahap aktif:** 3
-- **Terakhir selesai:** Tahap 2 (`config.py`, `database.py`, pembuatan tabel)
+- **Tahap aktif:** 4
+- **Terakhir selesai:** Tahap 3 (`security.py`: hash scrypt dan enkripsi Fernet)
 - **Masalah terbuka:** belum ada
-- **Yang ingin dikerjakan sekarang:** Tahap 3, `security.py` (hash scrypt dan enkripsi Fernet), beserta test
+- **Yang ingin dikerjakan sekarang:** Tahap 4, `buat_pengguna.py`, login, logout, sesi, batas percobaan login, beserta test
 
 ---
 
