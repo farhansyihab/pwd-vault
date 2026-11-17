@@ -1,23 +1,23 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
-from app.main import app
-import app.config as app_config
+
 from app.config import Settings
+from app.main import create_app
 
 
 @pytest.mark.anyio
-async def test_health(tmp_path, monkeypatch):
-    # Sediakan konfigurasi sementara lewat tmp_path: .env asli tidak dibaca.
+async def test_health(tmp_path):
+    # Konfigurasi sementara lewat tmp_path; .env asli tidak dibaca.
     env_file = tmp_path / ".env"
     env_file.write_text(
         "FERNET_KEY=password-palsu-key\nSESSION_SECRET=password-palsu-secret\n"
     )
-    settings_sementara = Settings(env_path=str(env_file))
-    # Ganti cache agar lifespan memakai konfigurasi sementara ini.
-    monkeypatch.setattr(app_config, "_settings", settings_sementara)
+    settings = Settings(env_path=str(env_file))
+    app = create_app(settings)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/health")
+
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}

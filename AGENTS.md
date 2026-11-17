@@ -11,7 +11,7 @@
 - Library yang sudah disetujui: `fastapi`, `uvicorn`, `pydantic`, `cryptography` (enkripsi Fernet), `itsdangerous` (cookie sesi), `python-multipart` (form login), `pytest`, `httpx` (untuk TestClient)
 - Library lain: tanyakan dulu sebelum dipasang
 - Hash password login memakai `hashlib.scrypt` bawaan Python, bukan library tambahan
-- Menjalankan server dev: `uvicorn app.main:app --reload --host 127.0.0.1 --port 8001`
+- Menjalankan server dev: `uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8001`
 
 ## Cara bekerja
 - Di awal setiap tahap, jelaskan rencana dalam 3-5 kalimat, lalu tunggu kata "lanjut" dari saya sebelum menulis file
@@ -89,7 +89,9 @@ pwd-vault/
 │   └── vault.db           # SQLite, tidak di-commit
 └── tests/
     ├── test_health.py
-    └── test_config_db.py
+    ├── test_config_db.py
+    ├── test_security.py
+    └── test_auth.py
 ```
 
 ## Skema database
@@ -118,7 +120,7 @@ pwd-vault/
 - [x] Tahap 1: folder proyek, venv, `requirements.txt`, `.gitignore`, `git init`, `main.py` minimal dengan `/health`, satu test
 - [x] Tahap 2: `config.py` (baca `.env`), `database.py` dan pembuatan tabel
 - [x] Tahap 3: `security.py` (hash scrypt dan enkripsi Fernet), beserta test
-- [ ] Tahap 4: `buat_pengguna.py`, login, logout, sesi, batas percobaan login, beserta test
+- [x] Tahap 4: `buat_pengguna.py`, login, logout, sesi, batas percobaan login, beserta test
 - [ ] Tahap 5: endpoint tambah, lihat daftar, lihat satu entri, beserta test (termasuk test bahwa isi database terenkripsi)
 - [ ] Tahap 6: endpoint ubah dan hapus, beserta test
 - [ ] Tahap 7: endpoint lihat password asli dan pencarian
@@ -129,10 +131,10 @@ pwd-vault/
 
 # 5. STATUS (kondisi sekarang)
 
-- **Tahap aktif:** 4
-- **Terakhir selesai:** Tahap 3 (`security.py`: hash scrypt dan enkripsi Fernet)
+- **Tahap aktif:** 5
+- **Terakhir selesai:** Tahap 4 (`buat_pengguna.py`, login, logout, sesi, batas percobaan login, beserta test)
 - **Masalah terbuka:** belum ada
-- **Yang ingin dikerjakan sekarang:** Tahap 4, `buat_pengguna.py`, login, logout, sesi, batas percobaan login, beserta test
+- **Yang ingin dikerjakan sekarang:** Tahap 5, endpoint tambah, lihat daftar, lihat satu entri, beserta test (termasuk test bahwa isi database terenkripsi)
 
 ---
 
