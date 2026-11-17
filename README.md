@@ -31,7 +31,7 @@ Aplikasi manajemen password (password vault) **lokal** yang dibangun dengan **Fa
 ### 1. Masuk ke direktori proyek
 
 ```bash
-cd /home/farhan/Proyek/pwd-vault/
+cd pwd-vault/
 ```
 
 ### 2. Buat & aktifkan virtual environment
