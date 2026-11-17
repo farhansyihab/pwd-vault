@@ -82,7 +82,8 @@ pwd-vault/
 │   ├── buat_pengguna.py   # skrip CLI membuat akun login
 │   └── routers/
 │       ├── auth.py        # /auth/login, /auth/logout, /auth/saya
-│       └── entri.py       # CRUD entri, reveal password, password acak
+│       ├── entri.py       # CRUD entri, reveal password
+│       └── alat.py        # /alat/password-acak
 ├── scripts/
 │   └── buat_env.py        # skrip CLI membuat .env (izin 600, tidak menimpa)
 ├── data/
@@ -92,7 +93,8 @@ pwd-vault/
     ├── test_config_db.py
     ├── test_security.py
     ├── test_auth.py
-    └── test_entri.py
+    ├── test_entri.py
+    └── test_alat.py
 ```
 
 ## Skema database
@@ -125,17 +127,17 @@ pwd-vault/
 - [x] Tahap 5: endpoint tambah, lihat daftar, lihat satu entri, beserta test (termasuk test bahwa isi database terenkripsi)
 - [x] Tahap 6: endpoint ubah dan hapus, beserta test
 - [x] Tahap 7: endpoint lihat password asli dan pencarian
-- [ ] Tahap 8: pembuat password acak
+- [x] Tahap 8: pembuat password acak
 - [ ] Tahap 9: tinjauan keamanan akhir (cek `.gitignore`, tidak ada rahasia di kode atau log, semua endpoint entri wajib login)
 
 ---
 
 # 5. STATUS (kondisi sekarang)
 
-- **Tahap aktif:** 8
-- **Terakhir selesai:** Tahap 7 (endpoint lihat password asli dan pencarian, beserta test)
+- **Tahap aktif:** 9
+- **Terakhir selesai:** Tahap 8 (pembuat password acak, beserta test)
 - **Masalah terbuka:** belum ada
-- **Yang ingin dikerjakan sekarang:** Tahap 8, pembuat password acak, beserta test
+- **Yang ingin dikerjakan sekarang:** Tahap 9, tinjauan keamanan akhir (cek `.gitignore`, tidak ada rahasia di kode atau log, semua endpoint entri wajib login)
 
 ---
 

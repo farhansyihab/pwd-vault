@@ -59,3 +59,14 @@ class EntriPasswordResponse(BaseModel):
 
     id: int
     password: str
+
+
+class PasswordAcakResponse(BaseModel):
+    """Response for the random password generator endpoint.
+
+    The generated password is a utility value produced on the fly; it is
+    not persisted anywhere.
+    """
+
+    password: str
+    panjang: int
