@@ -1,10 +1,14 @@
-"""Tests for entry (entri) endpoints: create, list, and view a single entry.
+"""Tests for entry (entri) endpoints: create, list, view, update, delete.
 
 Covers:
 - All entry endpoints require authentication.
 - Creating an entry stores an encrypted password (verified by reading the
   database directly and decrypting).
 - Listing and detail endpoints never leak the password.
+- Updating an entry: full/partial update, password re-encryption only when
+  provided, timestamp handling, 404 for missing entries.
+- Deleting an entry: removes the row, subsequent GET returns 404, 404 for
+  missing entries.
 """
 from datetime import datetime, timezone
 
@@ -109,6 +113,16 @@ def test_daftar_entri_tanpa_login(client):
 
 def test_lihat_entri_tanpa_login(client):
     r = client.get("/entri/1")
+    assert r.status_code == 401
+
+
+def test_ubah_entri_tanpa_login(client):
+    r = client.put("/entri/1", json={"username": "user"})
+    assert r.status_code == 401
+
+
+def test_hapus_entri_tanpa_login(client):
+    r = client.delete("/entri/1")
     assert r.status_code == 401
 
 
@@ -226,6 +240,255 @@ def test_lihat_entri_berhasil(auth_client):
 
 def test_lihat_entri_tidak_ada(auth_client):
     r = auth_client.get("/entri/999999")
+    assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Update entry
+# ---------------------------------------------------------------------------
+
+def test_ubah_entri_tidak_ada(auth_client):
+    r = auth_client.put("/entri/999999", json={"username": "user"})
+    assert r.status_code == 404
+
+
+def test_ubah_entri_field_kosong_ditolak(auth_client):
+    r = auth_client.post(
+        "/entri",
+        json={"username": "user", "password": "password-palsu-1", "provider": "p"},
+    )
+    entri_id = r.json()["id"]
+
+    r = auth_client.put(f"/entri/{entri_id}", json={"username": ""})
+    assert r.status_code == 422
+
+
+def test_ubah_entri_semua_field(auth_client):
+    r = auth_client.post(
+        "/entri",
+        json={
+            "username": "user-lama",
+            "password": "password-lama-palsu",
+            "email": "lama@contoh.example",
+            "provider": "provider-lama",
+            "url": "https://lama.example",
+            "keterangan": "keterangan lama",
+        },
+    )
+    entri_id = r.json()["id"]
+
+    r = auth_client.put(
+        f"/entri/{entri_id}",
+        json={
+            "username": "user-baru",
+            "password": "password-baru-palsu",
+            "email": "baru@contoh.example",
+            "provider": "provider-baru",
+            "url": "https://baru.example",
+            "keterangan": "keterangan baru",
+        },
+    )
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["id"] == entri_id
+    assert data["username"] == "user-baru"
+    assert data["email"] == "baru@contoh.example"
+    assert data["provider"] == "provider-baru"
+    assert data["url"] == "https://baru.example"
+    assert data["keterangan"] == "keterangan baru"
+    assert "password" not in data
+    assert "password_terenkripsi" not in data
+
+
+def test_ubah_entri_sebagian_field(auth_client):
+    r = auth_client.post(
+        "/entri",
+        json={
+            "username": "user-tetap",
+            "password": "password-tetap-palsu",
+            "email": "tetap@contoh.example",
+            "provider": "provider-lama",
+        },
+    )
+    entri_id = r.json()["id"]
+
+    r = auth_client.put(f"/entri/{entri_id}", json={"provider": "provider-baru"})
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["provider"] == "provider-baru"
+    assert data["username"] == "user-tetap"
+    assert data["email"] == "tetap@contoh.example"
+
+
+def test_ubah_entri_password_baru_terenkripsi(auth_client, test_db):
+    from app.database import get_connection
+    from app.security import decrypt_entry_password
+
+    plaintext_lama = "password-lama-palsu"
+    plaintext_baru = "password-baru-palsu"
+
+    r = auth_client.post(
+        "/entri",
+        json={"username": "user", "password": plaintext_lama, "provider": "p"},
+    )
+    entri_id = r.json()["id"]
+
+    r = auth_client.put(f"/entri/{entri_id}", json={"password": plaintext_baru})
+    assert r.status_code == 200, r.text
+
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT password_terenkripsi FROM entri WHERE id = ?",
+            (entri_id,),
+        )
+        row = cursor.fetchone()
+    finally:
+        conn.close()
+
+    stored = row["password_terenkripsi"]
+    assert stored is not None
+    assert stored != plaintext_baru
+    assert plaintext_baru not in stored
+    assert decrypt_entry_password(stored) == plaintext_baru
+
+
+def test_ubah_entri_tanpa_password_password_tetap(auth_client, test_db):
+    from app.database import get_connection
+    from app.security import decrypt_entry_password
+
+    plaintext = "password-tetap-palsu"
+
+    r = auth_client.post(
+        "/entri",
+        json={"username": "user", "password": plaintext, "provider": "p"},
+    )
+    entri_id = r.json()["id"]
+
+    r = auth_client.put(f"/entri/{entri_id}", json={"provider": "p-baru"})
+    assert r.status_code == 200, r.text
+
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT password_terenkripsi FROM entri WHERE id = ?",
+            (entri_id,),
+        )
+        row = cursor.fetchone()
+    finally:
+        conn.close()
+
+    assert decrypt_entry_password(row["password_terenkripsi"]) == plaintext
+
+
+def test_ubah_entri_password_null_tidak_mengubah(auth_client, test_db):
+    """Sending password: null is treated as 'do not change password'."""
+    from app.database import get_connection
+    from app.security import decrypt_entry_password
+
+    plaintext = "password-null-palsu"
+
+    r = auth_client.post(
+        "/entri",
+        json={"username": "user", "password": plaintext, "provider": "p"},
+    )
+    entri_id = r.json()["id"]
+
+    r = auth_client.put(f"/entri/{entri_id}", json={"password": None})
+    assert r.status_code == 200, r.text
+
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT password_terenkripsi FROM entri WHERE id = ?",
+            (entri_id,),
+        )
+        row = cursor.fetchone()
+    finally:
+        conn.close()
+
+    assert decrypt_entry_password(row["password_terenkripsi"]) == plaintext
+
+
+def test_ubah_entri_timestamp(auth_client):
+    import time
+
+    r = auth_client.post(
+        "/entri",
+        json={"username": "user", "password": "password-palsu-1", "provider": "p"},
+    )
+    data = r.json()
+    entri_id = data["id"]
+    dibuat_awal = data["dibuat_pada"]
+    diubah_awal = data["diubah_pada"]
+
+    time.sleep(0.001)
+
+    r = auth_client.put(f"/entri/{entri_id}", json={"provider": "p-baru"})
+    assert r.status_code == 200, r.text
+    data2 = r.json()
+    assert data2["dibuat_pada"] == dibuat_awal
+    assert data2["diubah_pada"] > diubah_awal
+
+
+# ---------------------------------------------------------------------------
+# Delete entry
+# ---------------------------------------------------------------------------
+
+def test_hapus_entri_tidak_ada(auth_client):
+    r = auth_client.delete("/entri/999999")
+    assert r.status_code == 404
+
+
+def test_hapus_entri_berhasil(auth_client):
+    r = auth_client.post(
+        "/entri",
+        json={"username": "user", "password": "password-palsu-1", "provider": "p"},
+    )
+    entri_id = r.json()["id"]
+
+    r = auth_client.delete(f"/entri/{entri_id}")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["status"] == "sukses"
+    assert str(entri_id) in body["pesan"]
+
+
+def test_hapus_entri_menghapus_dari_db(auth_client, test_db):
+    from app.database import get_connection
+
+    r = auth_client.post(
+        "/entri",
+        json={"username": "user", "password": "password-palsu-1", "provider": "p"},
+    )
+    entri_id = r.json()["id"]
+
+    r = auth_client.delete(f"/entri/{entri_id}")
+    assert r.status_code == 200, r.text
+
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) AS n FROM entri WHERE id = ?", (entri_id,))
+        assert cursor.fetchone()["n"] == 0
+    finally:
+        conn.close()
+
+
+def test_hapus_entri_lalu_get_404(auth_client):
+    r = auth_client.post(
+        "/entri",
+        json={"username": "user", "password": "password-palsu-1", "provider": "p"},
+    )
+    entri_id = r.json()["id"]
+
+    r = auth_client.delete(f"/entri/{entri_id}")
+    assert r.status_code == 200, r.text
+
+    r = auth_client.get(f"/entri/{entri_id}")
     assert r.status_code == 404
 
 

@@ -123,7 +123,7 @@ pwd-vault/
 - [x] Tahap 3: `security.py` (hash scrypt dan enkripsi Fernet), beserta test
 - [x] Tahap 4: `buat_pengguna.py`, login, logout, sesi, batas percobaan login, beserta test
 - [x] Tahap 5: endpoint tambah, lihat daftar, lihat satu entri, beserta test (termasuk test bahwa isi database terenkripsi)
-- [ ] Tahap 6: endpoint ubah dan hapus, beserta test
+- [x] Tahap 6: endpoint ubah dan hapus, beserta test
 - [ ] Tahap 7: endpoint lihat password asli dan pencarian
 - [ ] Tahap 8: pembuat password acak
 - [ ] Tahap 9: tinjauan keamanan akhir (cek `.gitignore`, tidak ada rahasia di kode atau log, semua endpoint entri wajib login)
@@ -132,10 +132,10 @@ pwd-vault/
 
 # 5. STATUS (kondisi sekarang)
 
-- **Tahap aktif:** 6
-- **Terakhir selesai:** Tahap 5 (endpoint tambah, lihat daftar, lihat satu entri, beserta test termasuk enkripsi database)
+- **Tahap aktif:** 7
+- **Terakhir selesai:** Tahap 6 (endpoint ubah dan hapus, beserta test)
 - **Masalah terbuka:** belum ada
-- **Yang ingin dikerjakan sekarang:** Tahap 6, endpoint ubah dan hapus, beserta test
+- **Yang ingin dikerjakan sekarang:** Tahap 7, endpoint lihat password asli dan pencarian, beserta test
 
 ---
 
