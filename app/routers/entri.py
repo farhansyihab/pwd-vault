@@ -1,18 +1,29 @@
-"""Entry (entri) endpoints: create, list, view, update and delete.
+"""Entry (entri) endpoints: create, list, view, update, delete,
+reveal password, and search.
 
 All endpoints require authentication (wajib_login).
 Passwords are encrypted before being stored and are never returned
-by the list/detail/update endpoints.
+by the list/detail/update endpoints. The original password can only
+be obtained via the dedicated reveal endpoint.
 """
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.auth import wajib_login
 from app.database import get_connection
-from app.models import EntriCreate, EntriResponse, EntriUpdate
-from app.security import encrypt_entry_password
+from app.models import (
+    EntriCreate,
+    EntriPasswordResponse,
+    EntriResponse,
+    EntriUpdate,
+)
+from app.security import (
+    VaultDecryptionError,
+    decrypt_entry_password,
+    encrypt_entry_password,
+)
 
 router = APIRouter(prefix="/entri", tags=["entri"])
 
@@ -20,6 +31,21 @@ router = APIRouter(prefix="/entri", tags=["entri"])
 def _now_iso() -> str:
     """Current UTC timestamp in ISO 8601 format."""
     return datetime.now(timezone.utc).isoformat()
+
+
+def _like_pattern(q: str) -> str:
+    """Build a SQL LIKE pattern from user input, escaping wildcards.
+
+    A literal ``\\``, ``%`` or ``_`` typed by the user must be matched
+    literally, not treated as a wildcard. The backslash is used as the
+    ESCAPE character in the SQL query.
+    """
+    escaped = (
+        q.replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("_", "\\_")
+    )
+    return f"%{escaped}%"
 
 
 def _row_to_response(row) -> EntriResponse:
@@ -85,20 +111,81 @@ def tambah_entri(payload: EntriCreate, current_user=Depends(wajib_login)):
 
 
 @router.get("", response_model=List[EntriResponse])
-def daftar_entri(current_user=Depends(wajib_login)):
-    """List all entries. The password field is never included."""
+def daftar_entri(
+    q: Optional[str] = Query(
+        None,
+        max_length=100,
+        description="Cari berdasarkan provider atau username (case-insensitive).",
+    ),
+    current_user=Depends(wajib_login),
+):
+    """List entries. The password field is never included.
+
+    If ``q`` is provided, only entries whose ``provider`` or ``username``
+    contains ``q`` (case-insensitive, wildcard characters are treated
+    literally) are returned. An empty ``q`` returns all entries.
+    """
+    base_sql = (
+        "SELECT id, username, email, provider, url, keterangan, "
+        "dibuat_pada, diubah_pada FROM entri"
+    )
+
     conn = get_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id, username, email, provider, url, keterangan, "
-            "dibuat_pada, diubah_pada FROM entri ORDER BY id DESC"
-        )
+        if q:
+            like = _like_pattern(q)
+            cursor.execute(
+                base_sql
+                + " WHERE provider LIKE ? ESCAPE '\\'"
+                + " OR username LIKE ? ESCAPE '\\'"
+                + " ORDER BY id DESC",
+                (like, like),
+            )
+        else:
+            cursor.execute(base_sql + " ORDER BY id DESC")
         rows = cursor.fetchall()
     finally:
         conn.close()
 
     return [_row_to_response(row) for row in rows]
+
+
+@router.get("/{entri_id}/password", response_model=EntriPasswordResponse)
+def lihat_password(entri_id: int, current_user=Depends(wajib_login)):
+    """Reveal the original (decrypted) password for one entry.
+
+    This is the only endpoint that returns the plaintext password.
+    Decryption failures are reported generically so that no detail
+    about the Fernet key or ciphertext leaks to the caller.
+    """
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, password_terenkripsi FROM entri WHERE id = ?",
+            (entri_id,),
+        )
+        row = cursor.fetchone()
+    finally:
+        conn.close()
+
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Entri dengan id {entri_id} tidak ditemukan.",
+        )
+
+    try:
+        plaintext = decrypt_entry_password(row["password_terenkripsi"])
+    except (VaultDecryptionError, Exception):
+        # Never expose ciphertext, key, or stack trace to the user.
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Gagal membuka password entri. Data mungkin rusak.",
+        )
+
+    return EntriPasswordResponse(id=row["id"], password=plaintext)
 
 
 @router.get("/{entri_id}", response_model=EntriResponse)

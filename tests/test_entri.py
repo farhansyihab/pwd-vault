@@ -1,4 +1,5 @@
-"""Tests for entry (entri) endpoints: create, list, view, update, delete.
+"""Tests for entry (entri) endpoints: create, list, view, update, delete,
+reveal password, and search.
 
 Covers:
 - All entry endpoints require authentication.
@@ -9,6 +10,11 @@ Covers:
   provided, timestamp handling, 404 for missing entries.
 - Deleting an entry: removes the row, subsequent GET returns 404, 404 for
   missing entries.
+- Revealing the password: returns the plaintext only via the dedicated
+  endpoint, requires login, 404 for missing entries, and does not leak
+  the password through list/detail endpoints.
+- Searching entries: by provider, by username, case-insensitive, no
+  matches, empty q, literal wildcard characters.
 """
 from datetime import datetime, timezone
 
@@ -123,6 +129,16 @@ def test_ubah_entri_tanpa_login(client):
 
 def test_hapus_entri_tanpa_login(client):
     r = client.delete("/entri/1")
+    assert r.status_code == 401
+
+
+def test_lihat_password_tanpa_login(client):
+    r = client.get("/entri/1/password")
+    assert r.status_code == 401
+
+
+def test_cari_entri_tanpa_login(client):
+    r = client.get("/entri?q=gmail")
     assert r.status_code == 401
 
 
@@ -530,3 +546,191 @@ def test_database_menyimpan_password_terenkripsi(auth_client, test_db):
     assert stored != plaintext
     assert plaintext not in stored
     assert decrypt_entry_password(stored) == plaintext
+
+
+# ---------------------------------------------------------------------------
+# Reveal password (Tahap 7)
+# ---------------------------------------------------------------------------
+
+def test_lihat_password_berhasil(auth_client):
+    plaintext = "rahasia-palsu-abc"
+    r = auth_client.post(
+        "/entri",
+        json={"username": "user", "password": plaintext, "provider": "p"},
+    )
+    assert r.status_code == 201, r.text
+    entri_id = r.json()["id"]
+
+    r = auth_client.get(f"/entri/{entri_id}/password")
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["id"] == entri_id
+    assert data["password"] == plaintext
+
+
+def test_lihat_password_tidak_ada(auth_client):
+    r = auth_client.get("/entri/999999/password")
+    assert r.status_code == 404
+
+
+def test_lihat_password_tidak_bocor_di_list_atau_detail(auth_client):
+    """The plaintext must only appear via the dedicated reveal endpoint."""
+    plaintext = "rahasia-palsu-xyz"
+    r = auth_client.post(
+        "/entri",
+        json={"username": "user", "password": plaintext, "provider": "p"},
+    )
+    entri_id = r.json()["id"]
+
+    r = auth_client.get("/entri")
+    assert r.status_code == 200
+    for item in r.json():
+        assert "password" not in item
+        assert "password_terenkripsi" not in item
+        assert plaintext not in str(item)
+
+    r = auth_client.get(f"/entri/{entri_id}")
+    assert r.status_code == 200
+    assert "password" not in r.json()
+    assert "password_terenkripsi" not in r.json()
+    assert plaintext not in str(r.json())
+
+
+def test_lihat_password_setelah_diubah(auth_client):
+    """Reveal must return the NEW plaintext after an update."""
+    plaintext_lama = "password-lama-palsu"
+    plaintext_baru = "password-baru-palsu"
+
+    r = auth_client.post(
+        "/entri",
+        json={"username": "user", "password": plaintext_lama, "provider": "p"},
+    )
+    entri_id = r.json()["id"]
+
+    r = auth_client.put(f"/entri/{entri_id}", json={"password": plaintext_baru})
+    assert r.status_code == 200, r.text
+
+    r = auth_client.get(f"/entri/{entri_id}/password")
+    assert r.status_code == 200, r.text
+    assert r.json()["password"] == plaintext_baru
+
+
+def test_lihat_password_id_bukan_integer(auth_client):
+    r = auth_client.get("/entri/bukan-angka/password")
+    assert r.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Search (Tahap 7)
+# ---------------------------------------------------------------------------
+
+def _seed_entries(auth_client):
+    entries = [
+        {"username": "alice@contoh.example", "password": "pw-1", "provider": "gmail"},
+        {"username": "bob@contoh.example", "password": "pw-2", "provider": "github"},
+        {"username": "charlie", "password": "pw-3", "provider": "gitlab"},
+    ]
+    ids = []
+    for e in entries:
+        r = auth_client.post("/entri", json=e)
+        assert r.status_code == 201, r.text
+        ids.append(r.json()["id"])
+    return ids
+
+
+def test_cari_entri_by_provider(auth_client):
+    _seed_entries(auth_client)
+    r = auth_client.get("/entri", params={"q": "git"})
+    assert r.status_code == 200
+    items = r.json()
+    providers = {i["provider"] for i in items}
+    assert providers == {"github", "gitlab"}
+    for item in items:
+        assert "password" not in item
+
+
+def test_cari_entri_by_username(auth_client):
+    _seed_entries(auth_client)
+    r = auth_client.get("/entri", params={"q": "alice"})
+    assert r.status_code == 200
+    items = r.json()
+    assert len(items) == 1
+    assert items[0]["username"].startswith("alice")
+
+
+def test_cari_entri_case_insensitive(auth_client):
+    _seed_entries(auth_client)
+    r = auth_client.get("/entri", params={"q": "GMAIL"})
+    assert r.status_code == 200
+    items = r.json()
+    assert len(items) == 1
+    assert items[0]["provider"] == "gmail"
+
+
+def test_cari_entri_tidak_ketemu(auth_client):
+    _seed_entries(auth_client)
+    r = auth_client.get("/entri", params={"q": "tidak-ada-yang-cocok"})
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+def test_cari_entri_q_kosong_kembalikan_semua(auth_client):
+    _seed_entries(auth_client)
+    r = auth_client.get("/entri", params={"q": ""})
+    assert r.status_code == 200
+    assert len(r.json()) == 3
+
+
+def test_cari_entri_tanpa_q_kembalikan_semua(auth_client):
+    _seed_entries(auth_client)
+    r = auth_client.get("/entri")
+    assert r.status_code == 200
+    assert len(r.json()) == 3
+
+
+def test_cari_entri_persen_diiteral(auth_client):
+    """A literal '%' in q must NOT act as a wildcard."""
+    r = auth_client.post(
+        "/entri",
+        json={"username": "user", "password": "pw", "provider": "persen%provider"},
+    )
+    assert r.status_code == 201, r.text
+
+    r = auth_client.post(
+        "/entri",
+        json={"username": "user2", "password": "pw", "provider": "lain"},
+    )
+    assert r.status_code == 201, r.text
+
+    r = auth_client.get("/entri", params={"q": "%"})
+    assert r.status_code == 200
+    items = r.json()
+    assert len(items) == 1
+    assert items[0]["provider"] == "persen%provider"
+
+
+def test_cari_entri_underscore_diiteral(auth_client):
+    """A literal '_' in q must NOT act as a single-character wildcard."""
+    r = auth_client.post(
+        "/entri",
+        json={"username": "user", "password": "pw", "provider": "provider_1"},
+    )
+    assert r.status_code == 201, r.text
+
+    r = auth_client.post(
+        "/entri",
+        json={"username": "user2", "password": "pw", "provider": "providerX1"},
+    )
+    assert r.status_code == 201, r.text
+
+    r = auth_client.get("/entri", params={"q": "_"})
+    assert r.status_code == 200
+    items = r.json()
+    assert len(items) == 1
+    assert items[0]["provider"] == "provider_1"
+
+
+def test_cari_entri_q_terlalu_panjang(auth_client):
+    """q longer than the allowed max_length returns 422."""
+    r = auth_client.get("/entri", params={"q": "x" * 101})
+    assert r.status_code == 422

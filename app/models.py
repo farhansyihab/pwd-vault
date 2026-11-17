@@ -47,3 +47,15 @@ class EntriResponse(BaseModel):
     keterangan: Optional[str] = None
     dibuat_pada: str
     diubah_pada: str
+
+
+class EntriPasswordResponse(BaseModel):
+    """Response for the reveal-password endpoint.
+
+    This is the ONLY response model that intentionally carries the
+    plaintext password, and it is returned only by the dedicated
+    ``GET /entri/{id}/password`` route after login.
+    """
+
+    id: int
+    password: str
