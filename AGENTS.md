@@ -128,16 +128,16 @@ pwd-vault/
 - [x] Tahap 6: endpoint ubah dan hapus, beserta test
 - [x] Tahap 7: endpoint lihat password asli dan pencarian
 - [x] Tahap 8: pembuat password acak
-- [ ] Tahap 9: tinjauan keamanan akhir (cek `.gitignore`, tidak ada rahasia di kode atau log, semua endpoint entri wajib login)
+- [x] Tahap 9: tinjauan keamanan akhir (cek `.gitignore`, tidak ada rahasia di kode atau log, semua endpoint entri wajib login)
 
 ---
 
 # 5. STATUS (kondisi sekarang)
 
-- **Tahap aktif:** 9
-- **Terakhir selesai:** Tahap 8 (pembuat password acak, beserta test)
+- **Tahap aktif:** selesai (semua 9 tahap)
+- **Terakhir selesai:** Tahap 9 (tinjauan keamanan akhir)
 - **Masalah terbuka:** belum ada
-- **Yang ingin dikerjakan sekarang:** Tahap 9, tinjauan keamanan akhir (cek `.gitignore`, tidak ada rahasia di kode atau log, semua endpoint entri wajib login)
+- **Yang ingin dikerjakan sekarang:** proyek selesai; opsional pengembangan lanjutan di luar SPEC
 
 ---
 
